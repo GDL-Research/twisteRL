@@ -46,7 +46,6 @@ def validate_algorithm_from_hub(repo_id: str, revision: str = "main"):
             "missing": ["<repo not found>"]
         }
     files_set = set(files)
-
     # Check for required file patterns
     missing = []
     for pattern in REQUIRED_FILES:
@@ -72,7 +71,7 @@ def pull_hub_algorithm(repo_id, model_path = "../models/", revision = "main", va
             revision = revision
         )
     logger.info(f"Model files are now in: {local_repo_path}")
-    return local_repo_path 
+    return local_repo_path
 
 def prepare_algorithm(config, run_path=None, load_checkpoint_path=None):
     # Import env class and make env
