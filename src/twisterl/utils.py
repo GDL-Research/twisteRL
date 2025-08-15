@@ -63,15 +63,18 @@ def pull_hub_algorithm(repo_id, model_path = "../models/", revision = "main", va
     if validate and not validate_algorithm["is_valid"]:
         logger.info(validate_algorithm)
         return False
-    local_repo_path = snapshot_download(
-            repo_id,
-            cache_dir = model_path,
-            resume_download = True,
-            allow_patterns = ["*.json", "*.pt"],
-            revision = revision
-        )
-    logger.info(f"Model files are now in: {local_repo_path}")
-    return local_repo_path
+    try:
+        local_repo_path = snapshot_download(
+                repo_id,
+                cache_dir = model_path,
+                allow_patterns = ["*.json", "*.pt"],
+                revision = revision,
+                force_download=False
+            )
+        logger.info(f"Model files are now in: {local_repo_path}")
+        return local_repo_path
+    except: 
+        return False
 
 def prepare_algorithm(config, run_path=None, load_checkpoint_path=None):
     # Import env class and make env
