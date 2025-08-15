@@ -14,6 +14,7 @@ import importlib
 import json
 import torch
 from huggingface_hub import HfApi, snapshot_download
+import fnmatch
 from loguru import logger
 
 
@@ -32,16 +33,13 @@ def json_load_tuples(dct):
     return dct
 
 
-import fnmatch
-
-
 def validate_algorithm_from_hub(repo_id: str, revision: str = "main"):
     # List of required file patterns to validate model
     REQUIRED_FILES = {"*.json", "*.pt"}
     api = HfApi()
     try:
         files = api.list_repo_files(repo_id, revision=revision)
-    except:
+    except Exception:
         return {"is_valid": False, "missing": ["<repo not found>"]}
     files_set = set(files)
     # Check for required file patterns
@@ -71,7 +69,7 @@ def pull_hub_algorithm(
         )
         logger.info(f"Model files are now in: {local_repo_path}")
         return local_repo_path
-    except:
+    except Exception:
         return False
 
 
