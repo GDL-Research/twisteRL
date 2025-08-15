@@ -14,7 +14,9 @@ import importlib
 import json
 import torch
 from huggingface_hub import HfApi, snapshot_download
+import fnmatch
 from loguru import logger
+
 
 def dynamic_import(path):
     try:
@@ -24,27 +26,21 @@ def dynamic_import(path):
     except (ImportError, AttributeError) as e:
         raise ImportError(f"Could not import '{path}'. Error: {e}")
 
+
 def json_load_tuples(dct):
     if "__tuple_list__" in dct:
         return [tuple(item) for item in dct["list"]]
     return dct
 
-import fnmatch
 
 def validate_algorithm_from_hub(repo_id: str, revision: str = "main"):
     # List of required file patterns to validate model
-    REQUIRED_FILES = {
-        "*.json",
-        "*.pt"
-    }
+    REQUIRED_FILES = {"*.json", "*.pt"}
     api = HfApi()
     try:
         files = api.list_repo_files(repo_id, revision=revision)
-    except:
-        return {
-            "is_valid": False,
-            "missing": ["<repo not found>"]
-        }
+    except Exception:
+        return {"is_valid": False, "missing": ["<repo not found>"]}
     files_set = set(files)
     # Check for required file patterns
     missing = []
@@ -53,25 +49,29 @@ def validate_algorithm_from_hub(repo_id: str, revision: str = "main"):
             missing.append(pattern)
 
     is_valid = len(missing) == 0
-    return {
-        "is_valid": is_valid,
-        "missing": missing
-    }
+    return {"is_valid": is_valid, "missing": missing}
 
-def pull_hub_algorithm(repo_id, model_path = "../models/", revision = "main", validate = False):
+
+def pull_hub_algorithm(
+    repo_id, model_path="../models/", revision="main", validate=False
+):
     validate_algorithm = validate_algorithm_from_hub(repo_id)
     if validate and not validate_algorithm["is_valid"]:
         logger.info(validate_algorithm)
         return False
-    local_repo_path = snapshot_download(
+    try:
+        local_repo_path = snapshot_download(
             repo_id,
-            cache_dir = model_path,
-            resume_download = True,
-            allow_patterns = ["*.json", "*.pt"],
-            revision = revision
+            cache_dir=model_path,
+            allow_patterns=["*.json", "*.pt"],
+            revision=revision,
+            force_download=False,
         )
-    logger.info(f"Model files are now in: {local_repo_path}")
-    return local_repo_path
+        logger.info(f"Model files are now in: {local_repo_path}")
+        return local_repo_path
+    except Exception:
+        return False
+
 
 def prepare_algorithm(config, run_path=None, load_checkpoint_path=None):
     # Import env class and make env

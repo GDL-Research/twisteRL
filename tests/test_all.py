@@ -9,6 +9,7 @@ from twisterl.nn.policy import BasicPolicy, Conv1dPolicy, Transpose
 from twisterl.rl.ppo import PPO
 from twisterl.rl.az import AZ
 from twisterl.defaults import PPO_CONFIG, AZ_CONFIG
+from twisterl.utils import pull_hub_algorithm
 
 
 class DummyEnv:
@@ -155,3 +156,14 @@ def test_az_data_to_torch_and_train_step():
     torch_data, _ = algo.data_to_torch(data)
     metrics, _ = algo.train_step(torch_data)
     assert "total" in metrics
+
+class DummyHubModelHandler:
+    def __init__(self, repo_id = "cnjonatan/example", model_path="../models/", revision="main", validate=True):
+        self.repo_id = repo_id
+        self.model_path = model_path
+        self.revision = revision
+        self.validate = validate
+
+def test_pull_hub_model():
+    dummy_hub = DummyHubModelHandler()
+    assert pull_hub_algorithm(dummy_hub.repo_id, dummy_hub.model_path, dummy_hub.revision) != False
