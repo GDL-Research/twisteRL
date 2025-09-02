@@ -34,6 +34,25 @@ def json_load_tuples(dct):
 
 
 def validate_algorithm_from_hub(repo_id: str, revision: str = "main"):
+    """Validate that a Hugging Face repository contains required model files.
+
+        Parameters
+    ----------
+    repo_id : str
+        Hugging Face repository identifier (e.g., "username/model-name" or an organization repo).
+
+    revision : str, optional
+        Git revision, branch, tag, or commit hash to inspect. Defaults to "main".
+
+    Returns
+    -------
+    `dict`
+        A dictionary with keys:
+        - "is_valid" (bool): **True** if all required file patterns are present, **False** otherwise.
+        - "missing" (list): list of required patterns that were not found; if the repo cannot be reached
+          returns ["<repo not found>"].
+    """
+
     # List of required file patterns to validate model
     REQUIRED_FILES = {"*.json", "*.pt"}
     api = HfApi()
@@ -55,10 +74,33 @@ def validate_algorithm_from_hub(repo_id: str, revision: str = "main"):
 def pull_hub_algorithm(
     repo_id, model_path="../models/", revision="main", validate=False
 ):
-    validate_algorithm = validate_algorithm_from_hub(repo_id)
-    if validate and not validate_algorithm["is_valid"]:
-        logger.info(validate_algorithm)
-        return False
+    """ ""Download a model/algorithm snapshot from a Hugging Face repo into a local cache.
+
+    Parameters
+    ----------
+    repo_id : str
+        Hugging Face repository identifier (e.g., "username/model-name" or an organization repo).
+
+    model_path : str optional
+        Local cache directory to store the snapshot. Defaults to "../models/".
+
+    revision : str optional
+        Git revision, branch, tag, or commit hash to download. Defaults to "main".
+
+    validate : bool, optional
+        If True, run validate_algorithm_from_hub(repo_id) before downloading; abort and return False if validation fails.
+
+    Returns
+    -------
+    `str` or `bool`
+        On success returns the local filesystem path to the downloaded snapshot directory.
+        On validation or download failure returns False.
+    """
+    if validate:
+        validate_algorithm = validate_algorithm_from_hub(repo_id)
+        if not validate_algorithm["is_valid"]:
+            logger.warning(f"Missing model files: {validate_algorithm['missing']}")
+            return False
     try:
         local_repo_path = snapshot_download(
             repo_id,
@@ -69,7 +111,8 @@ def pull_hub_algorithm(
         )
         logger.info(f"Model files are now in: {local_repo_path}")
         return local_repo_path
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Error: {e}")
         return False
 
 

@@ -158,12 +158,14 @@ def test_az_data_to_torch_and_train_step():
     assert "total" in metrics
 
 class DummyHubModelHandler:
-    def __init__(self, repo_id = "cnjonatan/example", model_path="../models/", revision="main", validate=True):
+    def __init__(self, repo_id = "cnjonatan/example", model_path="../models/", revision="main", snapshot = "ee8c429e6651fa6ca9ab9e52fc42c106b2e8622f", validate=True):
         self.repo_id = repo_id
         self.model_path = model_path
-        self.revision = revision
+        self.model_branch = revision
+        self.model_snapshot = snapshot
         self.validate = validate
 
 def test_pull_hub_model():
     dummy_hub = DummyHubModelHandler()
-    assert pull_hub_algorithm(dummy_hub.repo_id, dummy_hub.model_path, dummy_hub.revision) != False
+    assert pull_hub_algorithm(repo_id=dummy_hub.repo_id, model_path=dummy_hub.model_path, revision=dummy_hub.model_branch, validate=dummy_hub.validate) != False
+    assert pull_hub_algorithm(repo_id=dummy_hub.repo_id, model_path=dummy_hub.model_path, revision=dummy_hub.model_snapshot,validate=dummy_hub.validate) != False
