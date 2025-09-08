@@ -1,6 +1,6 @@
 import json
-import numpy as np
 import torch
+from pathlib import Path
 
 from twisterl.utils import load_config, prepare_algorithm
 from twisterl.defaults import make_config
@@ -9,7 +9,6 @@ from twisterl.nn.policy import BasicPolicy, Conv1dPolicy, Transpose
 from twisterl.rl.ppo import PPO
 from twisterl.rl.az import AZ
 from twisterl.defaults import PPO_CONFIG, AZ_CONFIG
-from twisterl.utils import pull_hub_algorithm
 
 
 class DummyEnv:
@@ -158,14 +157,21 @@ def test_az_data_to_torch_and_train_step():
     assert "total" in metrics
 
 class DummyHubModelHandler:
-    def __init__(self, repo_id = "cnjonatan/example", model_path="../models/", revision="main", snapshot = "ee8c429e6651fa6ca9ab9e52fc42c106b2e8622f", validate=True):
-        self.repo_id = repo_id
-        self.model_path = model_path
-        self.model_branch = revision
-        self.model_snapshot = snapshot
-        self.validate = validate
+    def __init__(self, repo_id = "Qiskit/example", model_path="../models/", revision="main", validate=True):
+            self.mock_cache = Path("models")
+            self.repo_id = repo_id
+            self.model_path = model_path
+            self.revision = revision
+            self.validate = validate
+            self.model_location = "models--Qiskit--example/snapshots"
 
-def test_pull_hub_model():
+    def mock_snapshot_download(self, revision):
+        snapshot_folder = f"{self.mock_cache}/{self.model_location}/{revision}"
+        return snapshot_folder
+    
+def test_pull_hub_model(mocker):
     dummy_hub = DummyHubModelHandler()
-    assert pull_hub_algorithm(repo_id=dummy_hub.repo_id, model_path=dummy_hub.model_path, revision=dummy_hub.model_branch, validate=dummy_hub.validate) != False
-    assert pull_hub_algorithm(repo_id=dummy_hub.repo_id, model_path=dummy_hub.model_path, revision=dummy_hub.model_snapshot,validate=dummy_hub.validate) != False
+    fake_snapshot_path = dummy_hub.mock_snapshot_download(dummy_hub.revision)
+    pull_hub_algorithm = mocker.patch('twisterl.utils.pull_hub_algorithm', autospec=True, return_value=fake_snapshot_path)
+    result = pull_hub_algorithm(repo_id=dummy_hub.repo_id, model_path=dummy_hub.model_path, revision=dummy_hub.revision, validate=dummy_hub.validate)
+    assert result != False
