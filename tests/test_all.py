@@ -2,7 +2,7 @@ import json
 import torch
 from pathlib import Path
 
-from twisterl.utils import load_config, prepare_algorithm
+from twisterl.utils import load_config, prepare_algorithm, pull_hub_algorithm
 from twisterl.defaults import make_config
 from twisterl.nn.utils import sequential_to_rust, embeddingbag_to_rust
 from twisterl.nn.policy import BasicPolicy, Conv1dPolicy, Transpose
@@ -158,20 +158,24 @@ def test_az_data_to_torch_and_train_step():
 
 class DummyHubModelHandler:
     def __init__(self, repo_id = "Qiskit/example", model_path="../models/", revision="main", validate=True):
-            self.mock_cache = Path("models")
             self.repo_id = repo_id
             self.model_path = model_path
             self.revision = revision
             self.validate = validate
-            self.model_location = "models--Qiskit--example/snapshots"
+            
+def fake_snapshot_download(repo_id, cache_dir=None, allow_patterns=None, revision=None, force_download=False):
+    snapshot_folder = Path(cache_dir) / f"models--{repo_id.replace('/', '--')}" / "snapshots" / revision
+    snapshot_folder.mkdir(parents=True, exist_ok=True)
+    return str(snapshot_folder)
 
-    def mock_snapshot_download(self, revision):
-        snapshot_folder = f"{self.mock_cache}/{self.model_location}/{revision}"
-        return snapshot_folder
-    
-def test_pull_hub_model(mocker):
+def test_pull_new_hub_model(mocker):
     dummy_hub = DummyHubModelHandler()
-    fake_snapshot_path = dummy_hub.mock_snapshot_download(dummy_hub.revision)
-    pull_hub_algorithm = mocker.patch('twisterl.utils.pull_hub_algorithm', autospec=True, return_value=fake_snapshot_path)
-    result = pull_hub_algorithm(repo_id=dummy_hub.repo_id, model_path=dummy_hub.model_path, revision=dummy_hub.revision, validate=dummy_hub.validate)
+    mocker.patch('twisterl.utils.validate_algorithm_from_hub', return_value={"is_valid": True, "missing": []})
+    mocker.patch('twisterl.utils.snapshot_download', autospec=True, side_effect=fake_snapshot_download)
+    result = pull_hub_algorithm(
+        repo_id=dummy_hub.repo_id,
+        model_path=dummy_hub.model_path,
+        revision=dummy_hub.revision,
+        validate=dummy_hub.validate
+    )
     assert result != False
