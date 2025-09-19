@@ -157,21 +157,23 @@ def test_az_data_to_torch_and_train_step():
     assert "total" in metrics
 
 class DummyHubModelHandler:
-    def __init__(self, repo_id = "Qiskit/example", model_path="../models/", revision="main", validate=True):
-            self.repo_id = repo_id
-            self.model_path = model_path
-            self.revision = revision
-            self.validate = validate
-            
-def fake_snapshot_download(repo_id, cache_dir=None, allow_patterns=None, revision=None, force_download=False):
+    def __init__(self, repo_id="Qiskit/example", model_path="../models/", revision="main", validate=True):
+        self.repo_id = repo_id
+        self.model_path = model_path
+        self.revision = revision
+        self.validate = validate
+        
+def fake_snapshot_download(repo_id, cache_dir, allow_patterns, revision, force_download):
     snapshot_folder = Path(cache_dir) / f"models--{repo_id.replace('/', '--')}" / "snapshots" / revision
     snapshot_folder.mkdir(parents=True, exist_ok=True)
     return str(snapshot_folder)
 
-def test_pull_new_hub_model(mocker):
+def test_pull_new_hub_model(mocker, tmp_path):
     dummy_hub = DummyHubModelHandler()
+    cache_dir = tmp_path / "snapshot_cache"
+    cache_dir.mkdir()
     mocker.patch('twisterl.utils.validate_algorithm_from_hub', return_value={"is_valid": True, "missing": []})
-    mocker.patch('twisterl.utils.snapshot_download', autospec=True, side_effect=fake_snapshot_download)
+    mocker.patch('twisterl.utils.snapshot_download', autospec=True, side_effect=lambda repo_id = dummy_hub.repo_id, cache_dir=None, allow_patterns=None, revision=None, force_download=False: fake_snapshot_download(repo_id, cache_dir=cache_dir, allow_patterns=allow_patterns, revision=revision, force_download=force_download))
     result = pull_hub_algorithm(
         repo_id=dummy_hub.repo_id,
         model_path=dummy_hub.model_path,
